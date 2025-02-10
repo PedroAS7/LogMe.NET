@@ -1,0 +1,73 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <ProjectGuid>{45B51540-D22D-4553-89C3-A56EA3AD0ADB}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>LogMe</RootNamespace>
+    <AssemblyName>LogMe</AssemblyName>
+    <TargetFrameworks>net6.0;net7.0;net8.0;net9.0</TargetFrameworks>
+    <FileAlignment>512</FileAlignment>
+    <Deterministic>true</Deterministic>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <IsPublishable>True</IsPublishable>
+    <ProduceReferenceAssembly>True</ProduceReferenceAssembly>
+    <Platforms>AnyCPU</Platforms>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <Title>LogMe</Title>
+    <Authors>PeterAS17</Authors>
+    <Copyright>2023-2025</Copyright>
+    <PackageProjectUrl>https://peteras17.me/creation?c=LIB&amp;b=LOGS</PackageProjectUrl>
+    <Description>This simple library is the perfect logging library for your .NET and NET Framework-based projects. It allows you to get complete control over where your logs go to, and how they are formatted, all from one object.
+
+
+The library makes sure message logging is thread-safe, so even multithreaded projects can use it.</Description>
+    <Configurations>Debug;Release</Configurations>
+    <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+    <Company>www.peteras17.me</Company>
+    <PackageLicenseFile>COPYING.LESSER.txt</PackageLicenseFile>
+    <PackageRequireLicenseAcceptance>True</PackageRequireLicenseAcceptance>
+    <NoWin32Manifest>true</NoWin32Manifest>
+    <ApplicationIcon>res\logme.ico</ApplicationIcon>
+    <PackageIcon>logme.png</PackageIcon>
+    <PackageId>$(AssemblyName).Net</PackageId>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <RepositoryUrl>https://github.com/PedroAS7/LogMe</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+  </PropertyGroup>
+  
+  <ItemGroup Condition=" '$(TargetFramework)' != 'net6.0' ">
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Net.Http" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <None Remove="res\logme.png" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <Content Include="res\logme.ico" />
+    <Content Include="res\logme.png">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+  
+  <ItemGroup>
+    <None Include="..\COPYING.LESSER.txt">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+    <None Include="..\README.md">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+  </ItemGroup>
+</Project>
