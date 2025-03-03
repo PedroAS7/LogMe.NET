@@ -1,18 +1,18 @@
 ﻿/*
- * LogMe
+ * LogMe.NET
  * Copyright (C) 2023-2025 PeterAS17
  * https://peteras17.me/
- * 
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
  * version 3 of the License, or (at your option) any later version.
- * 
+ *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301
@@ -46,7 +46,7 @@ namespace LogMe
         /// Main thread's ID
         /// </summary>
         private readonly int _mainThreadId = Environment.CurrentManagedThreadId;
-        
+
         /// <summary>
         /// Returns all the registered log providers' names
         /// </summary>
@@ -64,6 +64,7 @@ namespace LogMe
                         providersNames[i] = provider.Name;
                         ++i;
                     }
+
                     return providersNames;
                 }
             }
@@ -77,7 +78,7 @@ namespace LogMe
             Close();
         }
 
-        
+
         /// <summary>
         /// Checks whether a provider with provided name is already registered or not
         /// </summary>
@@ -106,7 +107,7 @@ namespace LogMe
             {
                 return;
             }
-            
+
             var isMainThread = Environment.CurrentManagedThreadId == _mainThreadId;
             var threadName = Thread.CurrentThread.Name ?? Environment.CurrentManagedThreadId.ToString("x8");
 
@@ -114,7 +115,7 @@ namespace LogMe
             {
                 // Calculate log timestamp. Must be coherent to log time, so we do it inside the locked section
                 var diff = DateTime.Now - _creationDateTime;
-                
+
                 foreach (var provider in _providersList)
                 {
                     provider.Log(message, level, diff, threadName, isMainThread);
@@ -151,19 +152,19 @@ namespace LogMe
             {
                 throw new ArgumentNullException(nameof(logProvider));
             }
-            
+
             lock (_providersList)
             {
                 if (string.IsNullOrWhiteSpace(logProvider.Name))
                 {
                     throw new ArgumentException("Non-null and non-whitespace log provider name is required.");
                 }
-                
+
                 if (HasProvider(logProvider.Name))
                 {
-                    throw new ArgumentException($"A logger with the name {logProvider.Name} already exists!");   
+                    throw new ArgumentException($"A logger with the name {logProvider.Name} already exists!");
                 }
-                
+
                 _providersList.AddLast(logProvider);
             }
         }
@@ -181,12 +182,12 @@ namespace LogMe
             {
                 throw new ArgumentNullException(nameof(providerName));
             }
-            
+
             lock (_providersList)
             {
                 if (!HasProvider(providerName))
                 {
-                    throw new ArgumentException($"No logger with named {providerName} exists!");   
+                    throw new ArgumentException($"No logger with named {providerName} exists!");
                 }
 
                 var provider = _providersList.First(l => l.Name == providerName);
@@ -208,11 +209,11 @@ namespace LogMe
             {
                 throw new ArgumentNullException(nameof(logProvider));
             }
-            
+
             RemoveProvider(logProvider.Name);
         }
-        
-        
+
+
         /// <summary>
         /// Outputs an error message to all registered loggers
         /// </summary>
@@ -220,7 +221,7 @@ namespace LogMe
         /// <param name="message">Message to output</param>
         public void Error(string message) => Log(message, LogLevel.Error);
 
-        
+
         /// <summary>
         /// Outputs a warning message to all registered log providers
         /// </summary>
@@ -228,7 +229,7 @@ namespace LogMe
         /// <param name="message">Message to output</param>
         public void Warning(string message) => Log(message, LogLevel.Warning);
 
-        
+
         /// <summary>
         /// Outputs an informational message to all registered log providers
         /// </summary>
@@ -236,7 +237,7 @@ namespace LogMe
         /// <param name="message">Message to output</param>
         public void Info(string message) => Log(message, LogLevel.Info);
 
-        
+
         /// <summary>
         /// Outputs a debug message to all registered log providers
         /// </summary>
@@ -244,7 +245,7 @@ namespace LogMe
         /// <param name="message">Message to output</param>
         public void Debug(string message) => Log(message, LogLevel.Debug);
 
-        
+
         /// <summary>
         /// Outputs a trace message to all registered log providers
         /// </summary>
@@ -264,18 +265,18 @@ namespace LogMe
             {
                 ex = new Exception("No exception message provided.");
             }
-            
+
             lock (_providersList)
             {
                 // Calculate log timestamp. Must be coherent to log time, so we do it inside the locked section
                 var diff = DateTime.Now - _creationDateTime;
-                
+
                 foreach (var provider in _providersList)
                 {
                     var isMainThread = Environment.CurrentManagedThreadId == _mainThreadId;
                     var threadName = Thread.CurrentThread.Name ?? Environment.CurrentManagedThreadId.ToString("x8");
                     provider.Exception(ex, diff, threadName, isMainThread);
-                }   
+                }
             }
         }
 
@@ -289,7 +290,7 @@ namespace LogMe
                 foreach (var provider in _providersList)
                 {
                     provider.Flush();
-                }   
+                }
             }
         }
     }

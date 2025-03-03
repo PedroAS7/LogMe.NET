@@ -1,18 +1,18 @@
 ﻿/*
- * LogMe
+ * LogMe.NET
  * Copyright (C) 2023-2025 PeterAS17
  * https://peteras17.me/
- * 
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
  * version 3 of the License, or (at your option) any later version.
- * 
+ *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301
@@ -20,26 +20,130 @@
  */
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Drawing;
 using System.IO;
 
 namespace LogMe
 {
+    /// <summary>
+    /// Base class for an object that receives logs, and provides them to an output stream
+    /// </summary>
     public abstract class LogProvider
     {
+        /// <summary>
+        /// This class' name
+        /// </summary>
         private static readonly string CurrentClassName = typeof(LogProvider).FullName ?? "";
+
+        /// <summary>
+        /// Logger class' name 
+        /// </summary>
         private static readonly string LogMgrClassName = typeof(Logger).FullName ?? "";
-        
-        protected readonly DateTime LoggerStart;
+
+        /// <summary>
+        /// Number of call frames obtained to ask GC to collect previous ones
+        /// </summary>
+        private static ushort _obtainedCallFrames;
+
+        /// <summary>
+        /// Maximum number of call frames obtained before asking GC to collect garbage
+        /// </summary>
+        private const ushort MaximumObtainedCallFrames = 1000;
+
+        /// <summary>
+        /// Minimum padding size for caller information
+        /// </summary>
+        private const uint MinCallerInfoPadding = 5;
+
+        /// <summary>
+        /// Maximum padding size for caller information
+        /// </summary>
+        private const uint MaxCallerInfoPadding = 70;
+
+        /// <summary>
+        /// Padding size for caller information. Default is 60 characters
+        /// </summary>
+        private uint _callerInfoPadding = 60;
+
+        /// <summary>
+        /// Dictionary containing log level to log level prefixes 
+        /// </summary>
+        private static readonly IReadOnlyDictionary<LogLevel, string> LevelToPrefix = new Dictionary<LogLevel, string>
+        {
+            { LogLevel.Error,   "E" },
+            { LogLevel.Warning, "W" },
+            { LogLevel.Info,    "I" },
+            { LogLevel.Debug,   "D" },
+            { LogLevel.Trace,   "T" }
+        };
+
+        /// <summary>
+        /// Interface instance containing functions returning rich text background or foreground colors
+        /// </summary>
+        protected readonly IColorAtlas ColorAtlas;
+
+        /// <summary>
+        /// Character used for new line
+        /// </summary>
+        protected const char NewLine = '\n';
+
+        /// <summary>
+        /// Output stream for this provider
+        /// </summary>
         protected TextWriter OutStream;
 
+        /// <summary>
+        /// Provider's name
+        /// </summary>
         public string Name { get; }
+
+        /// <summary>
+        /// Provider's log level
+        /// </summary>
         public LogLevel LogLevel { get; }
+
+        /// <summary>
+        /// Provider's flags
+        /// </summary>
         public LoggerFlags Flags { get; }
+
+        /// <summary>
+        /// Padding size for days when showing log time
+        /// </summary>
         public uint DaysPadding { get; protected set; } = 5;
+
+        /// <summary>
+        /// Padding size for seconds when showing log time
+        /// </summary>
         public uint SecsPadding { get; protected set; } = 5;
+
+        /// <summary>
+        /// Padding size for milliseconds when showing log time
+        /// </summary>
         public uint MsPadding { get; protected set; } = 3;
-        
+
+        /// <summary>
+        /// Padding size for caller information. Checks that value is [5; 70]
+        /// </summary>
+        public uint CallerInfoPadding
+        {
+            get => _callerInfoPadding;
+            protected set
+            {
+                if (value is < MinCallerInfoPadding or > MaxCallerInfoPadding)
+                {
+                    throw new ArgumentOutOfRangeException(nameof(value), value, "CallerInfoPadding");
+                }
+
+                _callerInfoPadding = value;
+            }
+        }
+
+        /// <summary>
+        /// Returns true when output stream is not null, meaning logs can be sent to this provider
+        /// </summary>
         public bool Ready => OutStream != null;
 
         /// <summary>
@@ -49,16 +153,18 @@ namespace LogMe
         /// <param name="level">Minimum acceptable message level</param>
         /// <param name="flags">Logger flags</param>
         /// <param name="outStream">Output stream</param>
+        /// <param name="colorAtlas">Rich text color atlas</param>
         protected LogProvider(string name,
                               LogLevel level,
                               LoggerFlags flags,
-                              TextWriter outStream = null)
+                              TextWriter outStream = null,
+                              IColorAtlas colorAtlas = null)
         {
             Name = name;
             Flags = flags;
             LogLevel = level;
-            LoggerStart = DateTime.Now;
             OutStream = outStream;
+            ColorAtlas = colorAtlas ?? new DefaultRichTextAtlas();
         }
 
 
@@ -67,7 +173,7 @@ namespace LogMe
             Close();
         }
 
-        
+
         /// <summary>
         /// Returns the current time as a string, based on when the logger started
         /// </summary>
@@ -78,7 +184,7 @@ namespace LogMe
             const string retVal = "[ {pD}{d} {pS}{s}s.{pM}{ms} ]";
             var dayCount = diff.Days;
             var totalSeconds = (int)diff.TotalSeconds;
-            var totalMs = diff.Milliseconds ;
+            var totalMs = diff.Milliseconds;
 
             // Formatting variables
             var showDays = dayCount > 0;
@@ -86,18 +192,21 @@ namespace LogMe
             var calcDaysPadding = DaysPadding;
             var calcSecsPadding = SecsPadding;
             var calcMsPadding = MsPadding;
-            
+
             if (showDays)
             {
                 calcDaysPadding -= 1; // for the 'd' indicator
-                calcDaysPadding -= (uint)dayCount.ToString().Length;
-                
-                // Underflow
-                if (calcDaysPadding > DaysPadding)
+
+                // Underflow cases
+                if (calcDaysPadding < (uint)dayCount.ToString().Length)
                 {
                     calcDaysPadding = 0;
                 }
-                
+                else
+                {
+                    calcDaysPadding -= (uint)dayCount.ToString().Length;
+                }
+
                 // Subtract seconds from fully-elapsed days
                 totalSeconds -= dayCount * 60 * 60 * 24;
             }
@@ -124,17 +233,25 @@ namespace LogMe
         /// <returns>String containing caller's frame</returns>
         private StackFrame GetCallerFrame()
         {
-            var callStack = new StackTrace(fNeedFileInfo: LogLevel >= LogLevel.Debug);
+            // Skip this method, as well as the logger's logging method (debug, info, exception, etc.)
+            var callStack = new StackTrace(2, fNeedFileInfo: LogLevel >= LogLevel.Debug);
 
             // If we have information about where we are
             if (string.IsNullOrEmpty(CurrentClassName))
                 return new StackFrame();
 
-            // Search for the first non-logger-related frame
-            var frameArray = callStack.GetFrames();
+            // Stack traces are heavy, and logging very often with log providers that require stack traces to be
+            // generated is memory intensive. Because we don't know when GC is going to run, we politely ask it to run
+            ++_obtainedCallFrames;
+            if (_obtainedCallFrames >= MaximumObtainedCallFrames)
+            {
+                // Objects are short-lived. They belong to generation 0
+                GC.Collect(0, GCCollectionMode.Optimized);
+                _obtainedCallFrames = 0;
+            }
 
             // Search through all the frames until we find one that matches a potential caller frame
-            foreach (var frame in frameArray)
+            foreach (var frame in callStack.GetFrames())
             {
                 var methodBase = frame.GetMethod();
                 if (null == methodBase || null == methodBase.DeclaringType)
@@ -153,14 +270,13 @@ namespace LogMe
             return new StackFrame();
         }
 
-        
+
         /// <summary>
         /// Obtains the caller's information
         /// </summary>
         /// <returns>String containing formatted caller's information</returns>
         private string GetCallerInfo()
         {
-            const uint maxSize = 60;
             const string retVal = "[ {pF}{f} ]";
 
             var callerFrame = GetCallerFrame();
@@ -170,19 +286,21 @@ namespace LogMe
             if (null == methodBase || null == methodBase.DeclaringType)
             {
                 return retVal.Replace("{f}", "?.?:?")
-                             .Replace("{pF}", " ".Repeat((uint)(maxSize - retVal.Length + 4))); // + 4 because of the {pM} placeholder
+                    .Replace("{pF}",
+                        " ".Repeat((uint)(CallerInfoPadding - retVal.Length +
+                                          4))); // + 4 because of the {pM} placeholder
             }
 
             // Build the string containing the caller's information
             var frameInfo = $"{methodBase.DeclaringType.Name}.{methodBase.Name}():{callerFrame.GetFileLineNumber()}";
-            if(frameInfo.Length > maxSize - 4)
+            if (frameInfo.Length > CallerInfoPadding - 4)
             {
-                frameInfo = $"...{frameInfo.Substring(frameInfo.Length - (int)maxSize + 3)}";
+                frameInfo = $"...{frameInfo.Substring(frameInfo.Length - (int)CallerInfoPadding + 3)}";
             }
 
             // Format the returned string
             return retVal.Replace("{f}", frameInfo)
-                         .Replace("{pF}", " ".Repeat((uint)(maxSize - frameInfo.Length)));
+                .Replace("{pF}", " ".Repeat((uint)(CallerInfoPadding - frameInfo.Length)));
         }
 
 
@@ -200,7 +318,16 @@ namespace LogMe
         {
             if (Flags.HasFlag(LoggerFlags.RichText))
             {
-                OutStream.Write($"<p style=\"background-color:{RichTextDb.LevelToBackground[messageLevel]}; color:{RichTextDb.LevelToForeground[messageLevel]}; width:100%; margin:0, padding:5\">");
+                var foreColor = ColorAtlas.GetForegroundColors()
+                                                .GetValueOrDefault(messageLevel, Color.Black)
+                                                .ToHexString();
+
+                var backColor = ColorAtlas.GetBackgroundColors()
+                                                .GetValueOrDefault(messageLevel, Color.Transparent)
+                                                .ToHexString();
+
+                OutStream.Write(
+                    $"<p style=\"background-color:{backColor}; color:{foreColor}; width:100%; margin:0, padding:5\">");
             }
 
             if (Flags.HasFlag(LoggerFlags.Timestamp))
@@ -218,7 +345,7 @@ namespace LogMe
                 OutStream.Write(GetCallerInfo());
             }
 
-            OutStream.Write($"[{RichTextDb.LevelToPrefix[messageLevel]}] ");
+            OutStream.Write($"[{LevelToPrefix[messageLevel]}] ");
         }
 
 
@@ -232,7 +359,7 @@ namespace LogMe
         {
             if (!Ready)
             {
-                throw new EndOfStreamException("Logger is not ready!");   
+                throw new EndOfStreamException("Logger is not ready!");
             }
 
             if (Flags.HasFlag(LoggerFlags.RichText))
@@ -240,7 +367,7 @@ namespace LogMe
                 OutStream.Write("</p>");
             }
 
-            OutStream.Write('\n');
+            OutStream.Write(NewLine);
         }
 
 
@@ -260,10 +387,12 @@ namespace LogMe
             var exceptionLocation = "in an unknown file, unknown line";
             if (null != callerMethod && null != callerMethod.DeclaringType)
             {
-                exceptionLocation = $"at {callerMethod.DeclaringType.Name}.{callerMethod.Name}:{callerStack.GetFileLineNumber()}";
-            }      
+                exceptionLocation =
+                    $"at {callerMethod.DeclaringType.Name}.{callerMethod.Name}:{callerStack.GetFileLineNumber()}";
+            }
 
-            Log($"An error has been raised {exceptionLocation}: {ex.Message}\nCall stack:\n{callStack}", LogLevel.Error, diff, threadName, isMainThread);
+            Log($"An error has been raised {exceptionLocation}: {ex.Message}\nCall stack:\n{callStack}", LogLevel.Error,
+                diff, threadName, isMainThread);
         }
 
 
@@ -284,17 +413,17 @@ namespace LogMe
             {
                 throw new ArgumentOutOfRangeException(nameof(level), level, null);
             }
-            
+
             // Logger not ready yet
             if (!Ready)
             {
                 throw new EndOfStreamException("Logger is not ready!");
             }
-            
+
             // Ignore messages we shouldn't be saving
             if (LogLevel < level)
             {
-                return;   
+                return;
             }
 
             PrintPreMessage(level, diff, threadName, isMainThread);
@@ -312,11 +441,11 @@ namespace LogMe
             {
                 throw new EndOfStreamException("Logger is not ready!");
             }
-            
+
             OutStream.Flush();
         }
 
-        
+
         /// <summary>
         /// Closes the logger, rendering it unusable until reinstantiated
         /// </summary>

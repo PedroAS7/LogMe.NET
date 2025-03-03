@@ -14,7 +14,7 @@
     <ProduceReferenceAssembly>True</ProduceReferenceAssembly>
     <Platforms>AnyCPU</Platforms>
     <PlatformTarget>AnyCPU</PlatformTarget>
-    <Title>LogMe</Title>
+    <Title>LogMe.Net</Title>
     <Authors>PeterAS17</Authors>
     <Copyright>2023-2025</Copyright>
     <PackageProjectUrl>https://peteras17.me/creation?c=LIB&amp;b=LOGS</PackageProjectUrl>
@@ -34,6 +34,11 @@ The library makes sure message logging is thread-safe, so even multithreaded pro
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <RepositoryUrl>https://github.com/PedroAS7/LogMe</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
+    <Version>1.1.0</Version>
+    <Product>LogMe.Net</Product>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+    <CheckForOverflowUnderflow>true</CheckForOverflowUnderflow>
   </PropertyGroup>
   
   <ItemGroup Condition=" '$(TargetFramework)' != 'net6.0' ">

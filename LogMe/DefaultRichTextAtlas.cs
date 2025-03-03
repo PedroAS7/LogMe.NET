@@ -1,5 +1,5 @@
 ﻿/*
- * LogMe
+ * LogMe.NET
  * Copyright (C) 2023-2025 PeterAS17
  * https://peteras17.me/
  * 
@@ -20,48 +20,41 @@
  */
 
 using System.Collections.Generic;
+using System.Drawing;
 
 namespace LogMe
 {
     /// <summary>
     /// Contains dictionaries of log level to color pairs 
     /// </summary>
-    internal static class RichTextDb
+    public class DefaultRichTextAtlas : IColorAtlas
     {
         /// <summary>
         /// Dictionary containing log level to foreground color pairs 
         /// </summary>
-        internal static readonly Dictionary<LogLevel, string> LevelToForeground = new Dictionary<LogLevel, string>
+        private static readonly IReadOnlyDictionary<LogLevel, Color> LevelToForeground = new Dictionary<LogLevel, Color>
         {
-            { LogLevel.Error,   "#FFFFFF" },
-            { LogLevel.Warning, "#000000" },
-            { LogLevel.Info,    "#000000" },
-            { LogLevel.Debug,   "#FFFFFF" },
-            { LogLevel.Trace,   "#FFFFFF" }
+            { LogLevel.Error,   Color.White },
+            { LogLevel.Warning, Color.Black },
+            { LogLevel.Info,    Color.Black },
+            { LogLevel.Debug,   Color.White },
+            { LogLevel.Trace,   Color.White }
         };
 
         /// <summary>
         /// Dictionary containing log level to background color pairs 
         /// </summary>
-        internal static readonly Dictionary<LogLevel, string> LevelToBackground = new Dictionary<LogLevel, string>
+        private static readonly IReadOnlyDictionary<LogLevel, Color> LevelToBackground = new Dictionary<LogLevel, Color>
         {
-            { LogLevel.Error,   "#E60000" },
-            { LogLevel.Warning, "#FFBB33" },
-            { LogLevel.Info,    "#FFFFFF" },
-            { LogLevel.Debug,   "#0099E6" },
-            { LogLevel.Trace,   "#283C88" }
+            { LogLevel.Error,   Color.FromArgb(230, 0, 0) },
+            { LogLevel.Warning, Color.FromArgb(255, 187, 51) },
+            { LogLevel.Info,    Color.White },
+            { LogLevel.Debug,   Color.FromArgb(0, 153, 230) },
+            { LogLevel.Trace,   Color.FromArgb(40, 60, 136) }
         };
 
-        /// <summary>
-        /// Dictionary containing log level to log level prefixes 
-        /// </summary>
-        internal static readonly Dictionary<LogLevel, string> LevelToPrefix = new Dictionary<LogLevel, string>
-        {
-            { LogLevel.Error,   "E" },
-            { LogLevel.Warning, "W" },
-            { LogLevel.Info,    "I" },
-            { LogLevel.Debug,   "D" },
-            { LogLevel.Trace,   "T" }
-        };
+        public IReadOnlyDictionary<LogLevel, Color> GetForegroundColors() => LevelToForeground;
+
+        public IReadOnlyDictionary<LogLevel, Color> GetBackgroundColors() => LevelToBackground;
     }
 }

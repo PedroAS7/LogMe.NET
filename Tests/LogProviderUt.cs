@@ -1,5 +1,5 @@
 ﻿/*
- * LogMe
+ * LogMe.NET
  * Copyright (C) 2023-2025 PeterAS17
  * https://peteras17.me/
  *
@@ -25,23 +25,23 @@ using LogMe;
 
 namespace Test;
 
-
 /// <summary>
 /// Tests functionalities of the log provider class
 /// </summary>
 public class LogProviderUt
 {
     private delegate void ManagerLogFunction(string message);
+
     private Logger _logger;
 
-    
+
     [SetUp]
     public void Setup()
     {
         _logger = new Logger();
     }
 
-    
+
     /// <summary>
     /// Log provider that allows log timestamp to be adjusted
     /// </summary>
@@ -56,7 +56,7 @@ public class LogProviderUt
         {
             FixedTime = TimeSpan.Zero;
             _fixTime = false;
-            
+
             // Tests fields are protected and not private
             DaysPadding = DaysPadding;
             SecsPadding = SecsPadding;
@@ -82,14 +82,15 @@ public class LogProviderUt
     {
         public BrokenLogLevelLogger(StringWriter outStream)
             : base("Broken log level logger", LogLevel.Debug, LoggerFlags.None, outStream)
-        { }
+        {
+        }
 
         public override void Log(string message, LogLevel level, TimeSpan diff, string threadName, bool isMainThread)
         {
             base.Log(message, (LogLevel)int.MaxValue, diff, threadName, isMainThread);
         }
     }
-    
+
 
     /// <summary>
     /// Tests the standard timestamp format and value
@@ -98,7 +99,7 @@ public class LogProviderUt
     public void TimestampTextTest()
     {
         const string testMessage = "Test";
-        
+
         /*
          * No timestamp
          */
@@ -229,29 +230,30 @@ public class LogProviderUt
 
             var expectedEnd = time.Milliseconds.ToString();
             var expectedStart = string.Empty;
-            
+
             var daySeconds = time.Seconds + time.Minutes * 60 + time.Hours * 60 * 60;
             if (daySeconds > 0)
             {
-                expectedEnd = $"{daySeconds}s.{expectedEnd.Repeat((uint)(provider.MsPadding - expectedEnd.Length))}{expectedEnd}";
+                expectedEnd =
+                    $"{daySeconds}s.{expectedEnd.Repeat((uint)(provider.MsPadding - expectedEnd.Length))}{expectedEnd}";
             }
 
             if (time.Days > 0)
             {
                 expectedStart = $"{time.Days}d ";
             }
-            
+
             // Test format with regex, then timestamp with values
             Assert.That(buffer.ToString(), Does.Match(MatchingTimestampRegex(provider)));
             Assert.That(buffer.ToString(), Does.Contain($"{expectedEnd} ]"));
-            
+
             if (!string.IsNullOrEmpty(expectedStart))
             {
                 Assert.That(buffer.ToString(), Does.Contain(expectedStart));
             }
         }
     }
-    
+
 
     /// <summary>
     /// Tests that only the allowed message log levels are logged
@@ -300,7 +302,7 @@ public class LogProviderUt
         }
     }
 
-    
+
     /// <summary>
     /// Checks that manager throws an error if an unknown log level is passed in the parameters list
     /// </summary>
@@ -314,7 +316,7 @@ public class LogProviderUt
         _logger.RemoveProvider(provider);
     }
 
-    
+
     /// <summary>
     /// Checks that an exception is raised when logger tries to be used after it's closed
     /// </summary>
@@ -341,7 +343,7 @@ public class LogProviderUt
     {
         const string exceptionMessage = "Test exception";
         var exception = new Exception(exceptionMessage);
-        
+
         TestContext.Out.WriteLine("Callstack on non-debug log level");
         var writer = new StringWriter();
         var provider = new StringBufferLog("Str logger", writer, LogLevel.Error);
@@ -350,13 +352,13 @@ public class LogProviderUt
         _logger.RemoveProvider(provider);
         var logStr = writer.GetStringBuilder().ToString();
         TestContext.Out.WriteLine(logStr);
-        
+
         // Contains error message
         Assert.That(logStr, Does.Contain(exceptionMessage));
-        
+
         // Contains file and function
         Assert.That(logStr, Does.Match("at [a-zA-Z0-9.]+" + nameof(CallstackInNonDebugExceptionTest)));
-        
+
         // Contains correct throwing function and no line
         Assert.That(logStr, Does.Contain(nameof(CallstackInNonDebugExceptionTest) + ":0"));
     }
@@ -371,7 +373,7 @@ public class LogProviderUt
     {
         const string exceptionMessage = "Test exception";
         var exception = new Exception(exceptionMessage);
-        
+
         TestContext.Out.WriteLine("Callstack on non-debug log level");
         var writer = new StringWriter();
         var provider = new StringBufferLog("Str logger", writer, LogLevel.Debug);
@@ -381,13 +383,13 @@ public class LogProviderUt
         _logger.RemoveProvider(provider);
         var logStr = writer.GetStringBuilder().ToString();
         TestContext.Out.WriteLine(logStr);
-        
+
         // Contains error message
         Assert.That(logStr, Does.Contain(exceptionMessage));
-        
+
         // Contains file and function
         Assert.That(logStr, Does.Match("at [a-zA-Z0-9.]+" + nameof(CallstackInDebugExceptionTest)));
-        
+
         // Contains correct throwing function and correct line
         Assert.That(logStr, Does.Contain(nameof(CallstackInDebugExceptionTest) + ":" + (lineNumber - 1)));
         return;

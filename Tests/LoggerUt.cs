@@ -1,18 +1,18 @@
 /*
- * LogMe
+ * LogMe.NET
  * Copyright (C) 2023-2025 PeterAS17
  * https://peteras17.me/
- * 
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
  * version 3 of the License, or (at your option) any later version.
- * 
+ *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301
@@ -26,7 +26,7 @@ namespace Test;
 public class LoggerUt
 {
     private Logger _logger;
-        
+
     [SetUp]
     public void Setup()
     {
@@ -40,7 +40,7 @@ public class LoggerUt
     public void NoLoggersTest()
     {
         Assert.That(_logger.ProvidersNames, Is.Empty);
-            
+
         // Message logging process
         Assert.Multiple(() =>
         {
@@ -53,7 +53,7 @@ public class LoggerUt
         });
     }
 
-        
+
     /// <summary>
     /// Tests the manager when it contains one logger
     /// </summary>
@@ -64,7 +64,7 @@ public class LoggerUt
         const string loggerName = "Str logger";
         var stringStream = new StringWriter();
         var provider = new StringBufferLog(loggerName, stringStream, LogLevel.Trace);
-            
+
         // Logger register process
         Assert.Multiple(() =>
         {
@@ -73,7 +73,7 @@ public class LoggerUt
             Assert.That(_logger.ProvidersNames, Has.Length.EqualTo(1));
             Assert.Throws<ArgumentException>(() => _logger.AddProvider(provider)); // Repeated logger
         });
-            
+
         // Message logging process
         Assert.Multiple(() =>
         {
@@ -83,7 +83,7 @@ public class LoggerUt
             Assert.DoesNotThrow(() => _logger.Debug(""));
             Assert.DoesNotThrow(() => _logger.Trace(""));
         });
-            
+
         // Logger unregister process
         Assert.Multiple(() =>
         {
@@ -99,5 +99,18 @@ public class LoggerUt
         });
 
         _logger.Close();
+    }
+
+
+    [Test]
+    public void CloseLogger()
+    {
+        const string loggerName = "Str logger";
+        var stringStream = new StringWriter();
+        var provider = new StringBufferLog(loggerName, stringStream, LogLevel.Trace);
+        _logger.AddProvider(provider);
+
+        _logger.Close();
+        Assert.That(_logger.ProvidersNames, Is.Empty);
     }
 }
